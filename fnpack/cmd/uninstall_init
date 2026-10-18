@@ -1,0 +1,3 @@
+#!/bin/bash
+pkill -9 -f "${TRIM_APPDEST}/server/dist/index.js" 2>/dev/null || true
+exit 0

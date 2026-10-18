@@ -1,0 +1,13 @@
+{
+  ".url": {
+    "freellmapi.Application": {
+      "title": "FreeLLMAPI 免费API网关",
+      "icon": "images/icon_{0}.png",
+      "type": "iframe",
+      "protocol": "http",
+      "port": "3003",
+      "url": "/",
+      "allUsers": true
+    }
+  }
+}

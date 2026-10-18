@@ -1,0 +1,13 @@
+appname               = freellmapi
+version               = 0.16.2.1
+display_name          = FreeLLMAPI 免费模型聚合API
+desc                  = 基于上游 FreeLLMAPI 的 fnOS 原生打包版：把各家免费额度模型聚合成 OpenAI 兼容 API 网关。<br/>默认端口 3003（如需更换请安装后在应用中心修改桌面入口）
+platform              = x86
+source                = thirdparty
+install_dep_apps      = nodejs_v24
+maintainer          = xiguan99
+distributor           = xiguan99
+distributor_url       = https://github.com/xiguan99/freellmapi-fnos
+desktop_uidir         = ui
+desktop_applaunchname = freellmapi.Application
+micro_app             = true

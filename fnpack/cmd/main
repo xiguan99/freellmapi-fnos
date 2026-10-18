@@ -1,0 +1,87 @@
+#!/bin/bash
+# freellmapi 生命周期入口（照 deepseek.harness.fnos 版式）
+LOG_FILE="${TRIM_PKGVAR}/info.log"
+PID_FILE="${TRIM_PKGVAR}/app.pid"
+APP_DIR="${TRIM_APPDEST}"
+
+LIB_TYPE="${wizard_data_library_type:-data}"
+if [ "${LIB_TYPE}" = "data" ]; then
+    DATA_LIBRARY_PATH="${TRIM_PKGVAR}"
+else
+    DATA_LIBRARY_PATH="${TRIM_DATA_SHARE_PATHS%%:*}"
+fi
+RUN_USER="${wizard_run_user:-root}"
+
+export PORT="${PORT:-3003}"
+export NODE_ENV=production
+export FREELLMAPI_INSTALL_METHOD=fnos
+[ -f "${DATA_LIBRARY_PATH}/freellmapi.env" ] && . "${DATA_LIBRARY_PATH}/freellmapi.env"
+
+# 生产模式要求 64 位 hex ENCRYPTION_KEY：首启生成并存入数据目录（重装/升级随数据保留）
+KEY_FILE="${DATA_LIBRARY_PATH}/data/.encryption-key"
+if [ -z "${ENCRYPTION_KEY:-}" ]; then
+    mkdir -p "${DATA_LIBRARY_PATH}/data" 2>/dev/null || true
+    [ -s "${KEY_FILE}" ] || node -e "console.log(require('crypto').randomBytes(32).toString('hex'))" > "${KEY_FILE}" 2>/dev/null || true
+    [ -s "${KEY_FILE}" ] && export ENCRYPTION_KEY="$(cat "${KEY_FILE}")"
+fi
+
+log_msg() { echo "$(date '+%Y-%m-%d %H:%M:%S') [INFO] $1" >> "${LOG_FILE}"; }
+log_err() { echo "$(date '+%Y-%m-%d %H:%M:%S') [ERROR] $1" >> "${LOG_FILE}"; }
+check_process() { kill -0 "$1" 2>/dev/null; }
+
+status() {
+    if [ -f "${PID_FILE}" ]; then
+        pid=$(head -n 1 "${PID_FILE}" | tr -d '[:space:]')
+        if check_process "${pid}"; then return 0; else rm -f "${PID_FILE}"; fi
+    fi
+    return 1
+}
+
+start_process() {
+    status && return 0
+    command -v node >/dev/null 2>&1 || { log_err "node 不在 PATH（检查 nodejs_v24 依赖）"; return 1; }
+    [ -f "${APP_DIR}/server/dist/index.js" ] || { log_err "找不到 ${APP_DIR}/server/dist/index.js"; return 1; }
+    log_msg "启动 freellmapi (PORT=${PORT}, USER=${RUN_USER}, DATA=${DATA_LIBRARY_PATH})"
+    if [ "${RUN_USER}" != "root" ] && id "${RUN_USER}" >/dev/null 2>&1; then
+        su -s /bin/bash "${RUN_USER}" -c "cd '${APP_DIR}' && exec node server/dist/index.js >> '${LOG_FILE}' 2>&1 & echo \$!" &
+    else
+        bash -c "cd '${APP_DIR}' && exec node server/dist/index.js >> '${LOG_FILE}' 2>&1 & echo \$!" &
+    fi
+    pid=$!
+    sleep 2
+    if ! check_process "${pid}"; then
+        real=$(pgrep -f "node .*server/dist/index.js" | head -1)
+        [ -n "${real}" ] && pid="${real}"
+    fi
+    if check_process "${pid}"; then
+        printf "%s" "${pid}" > "${PID_FILE}"
+        log_msg "启动成功 PID=${pid}"
+        return 0
+    fi
+    log_err "启动失败"
+    return 1
+}
+
+stop_process() {
+    log_msg "停止 freellmapi"
+    if [ -f "${PID_FILE}" ]; then
+        pid=$(head -n 1 "${PID_FILE}" | tr -d '[:space:]')
+        if check_process "${pid}"; then
+            kill -TERM "${pid}" 2>/dev/null
+            count=0
+            while check_process "${pid}" && [ $count -lt 5 ]; do sleep 1; count=$((count+1)); done
+            check_process "${pid}" && { log_err "5 秒未退出，SIGKILL"; kill -KILL "${pid}" 2>/dev/null || true; }
+        fi
+        rm -f "${PID_FILE}"
+    fi
+    pkill -9 -f "${APP_DIR}/server/dist/index.js" 2>/dev/null || true
+    log_msg "已停止"
+    return 0
+}
+
+case $1 in
+start)   start_process ;;
+stop)    stop_process ;;
+status)  status && exit 0 || exit 3 ;;
+*)       exit 1 ;;
+esac

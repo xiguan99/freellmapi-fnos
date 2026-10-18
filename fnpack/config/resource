@@ -1,0 +1,18 @@
+{
+    "data-share": {
+        "shares": [
+            {
+                "name": "freellmapi",
+                "permission": {
+                    "rw": [
+                        "freellmapi"
+                    ]
+                }
+            }
+        ]
+    },
+    "api-scope": [
+        "trim.file.sharedAccess",
+        "trim.file.userAccess"
+    ]
+}

@@ -1,0 +1,9 @@
+upstream/
+dist/
+node_modules/
+.DS_Store
+fnpack/dist/
+fnpack/*.fpk
+fnpack/app/*
+!fnpack/app/ui
+fnpack/app/ui/images/

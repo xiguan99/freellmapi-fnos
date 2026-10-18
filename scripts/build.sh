@@ -1,0 +1,58 @@
+#!/bin/bash
+# freellmapi-fnos 构建脚本（参照 deepseek.harness.fnos / fnos-hermes-agent-web 版式）
+# 流程: 上游 npm ci -> 全量构建 -> prune 生产依赖 -> 组装 fnpack/app 运行时树 -> fnpack 出 .fpk
+# 运行环境: NAS 本机（native 模块 better-sqlite3 就地编译，天然对 x86_64 Linux + node24）
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
+
+UPSTREAM="${UPSTREAM_DIR:-$ROOT/upstream}"
+FP_BIN="$ROOT/scripts/fnpack-1.2.3-linux-amd64"
+# 版本号 = 上游版本.构建号（上游版本来自 desktop/package.json）
+UP_VER="$(node -e "console.log(require('$UPSTREAM/desktop/package.json').version)")"
+BUILD_NUM="$(cat "$ROOT/VERSION" | tr -d '[:space:]' | rev | cut -d. -f1 | rev)"
+VERSION="${UP_VER}.${BUILD_NUM}"
+[ -f "$ROOT/VERSION" ] && echo "$VERSION" > "$ROOT/VERSION"
+echo "═══ 构建 freellmapi v$VERSION ═══"
+
+# ── 上游安装与构建（可增量：设 SKIP_INSTALL=1 跳过 npm ci，设 SKIP_BUILD=1 跳过构建）──
+if [ "${SKIP_INSTALL:-0}" != "1" ]; then
+  echo "[1/5] npm ci ..."
+  ( cd "$UPSTREAM" && npm ci --no-audit --no-fund )
+fi
+if [ "${SKIP_BUILD:-0}" != "1" ]; then
+  echo "[2/5] 构建 server+cli+client ..."
+  ( cd "$UPSTREAM" && npm run build )
+fi
+
+echo "[3/5] 生产依赖剪枝（保留 native 模块）..."
+( cd "$UPSTREAM" && npm prune --omit=dev )
+
+echo "[4/5] 组装运行时树 fnpack/app ..."
+APP="$ROOT/fnpack/app"
+for item in node_modules server client shared desktop package.json package-lock.json; do rm -rf "${APP:?}/$item"; done
+cp "$UPSTREAM/package.json" "$UPSTREAM/package-lock.json" "$APP/"
+cp -a "$UPSTREAM/node_modules" "$APP/node_modules"
+mkdir -p "$APP/server" "$APP/client" "$APP/desktop" "$APP/shared"
+cp -a "$UPSTREAM/server/node_modules" "$APP/server/node_modules" 2>/dev/null || true
+cp "$UPSTREAM/server/package.json" "$APP/server/"
+cp -a "$UPSTREAM/server/dist" "$APP/server/dist"
+cp -a "$UPSTREAM/client/dist" "$APP/client/dist"
+cp -a "$UPSTREAM/shared/." "$APP/shared/" 2>/dev/null || true
+cp "$UPSTREAM/desktop/package.json" "$APP/desktop/package.json"
+mkdir -p "$APP/server/data"
+
+echo "[x] 隐私扫描 ..."
+# 注：sk- 阈值 20+（实测客户端 bundle 里斯洛伐克语 chunk 名 sk-XXXXXXXX 会撞 8 位阈值，误报过一次）
+if grep -rIl -e '/vol[0-9]\+/@app\(home\|data\)/' -e 'sk-[A-Za-z0-9]\{20,\}' -e 'token=[A-Za-z0-9]' "$APP" --exclude-dir=node_modules 2>/dev/null | grep -v '\.map$' | head -5 | grep -q .; then
+  echo "✗ 疑似泄漏本机路径/密钥，中止（自行 grep 处理）"; exit 1
+fi
+
+echo "[5/5] fnpack 打包 ..."
+# 更新 manifest / ui config 里的版本
+sed -i "s/^version .*=.*/version               = $VERSION/" "$ROOT/fnpack/manifest"
+cd "$ROOT/fnpack"
+"$FP_BIN" build
+ls -la dist/ 2>/dev/null || ls -la *.fpk 2>/dev/null || true
+echo "═══ 完成：产物见 fnpack/ 或 dist/ ═══"

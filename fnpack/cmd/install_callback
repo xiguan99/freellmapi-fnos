@@ -1,0 +1,29 @@
+#!/bin/bash
+# 安装后回调：建数据目录+符号链接并启动服务（安装完立即可用）
+LOG_FILE="${TRIM_PKGVAR}/info.log"
+touch "${LOG_FILE}" 2>/dev/null || true
+log_msg() { echo "$(date '+%Y-%m-%d %H:%M:%S') [INFO] $1" >> "${LOG_FILE}" 2>/dev/null || true; }
+
+LIB_TYPE="${wizard_data_library_type:-data}"
+if [ "${LIB_TYPE}" = "data" ]; then
+    DATA_LIBRARY_PATH="${TRIM_PKGVAR}"
+else
+    DATA_LIBRARY_PATH="${TRIM_DATA_SHARE_PATHS%%:*}"
+fi
+RUN_USER="${wizard_run_user:-root}"
+
+log_msg "install_callback: DATA=${DATA_LIBRARY_PATH}, USER=${RUN_USER}"
+[ -n "${DATA_LIBRARY_PATH}" ] && mkdir -p "${DATA_LIBRARY_PATH}/data"
+
+DD="${TRIM_APPDEST}/server/data"
+if [ -d "${DD}" ] && [ ! -L "${DD}" ]; then rmdir "${DD}" 2>/dev/null || true; fi
+[ -L "${DD}" ] || ln -s "${DATA_LIBRARY_PATH}/data" "${DD}" 2>/dev/null || true
+
+if [ "${RUN_USER}" != "root" ] && id "${RUN_USER}" >/dev/null 2>&1; then
+    chown -R "${RUN_USER}" "${DATA_LIBRARY_PATH}/data" 2>/dev/null || true
+    chown -R "${RUN_USER}" "${TRIM_PKGVAR}" 2>/dev/null || true
+fi
+
+bash "$(dirname "$0")/main" start 2>/dev/null || true
+log_msg "install_callback 完成"
+exit 0
