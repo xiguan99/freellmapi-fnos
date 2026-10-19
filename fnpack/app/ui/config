@@ -1,7 +1,7 @@
 {
   ".url": {
     "freellmapi.Application": {
-      "title": "FreeLLMAPI 免费API网关",
+      "title": "FreeLLMAPI",
       "icon": "images/icon_{0}.png",
       "type": "iframe",
       "protocol": "http",

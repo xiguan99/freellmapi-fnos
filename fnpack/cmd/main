@@ -17,11 +17,20 @@ export NODE_ENV=production
 export FREELLMAPI_INSTALL_METHOD=fnos
 [ -f "${DATA_LIBRARY_PATH}/freellmapi.env" ] && . "${DATA_LIBRARY_PATH}/freellmapi.env"
 
+# 服务守护环境的 PATH 不含 nodejs_v24 套件，需显式解析 node（实测：安装/启停时 command -v node 为空）
+NODE_BIN="$(command -v node || true)"
+if [ -z "${NODE_BIN}" ]; then
+    for p in /var/apps/nodejs_v24/target/bin /usr/local/nodejs_v24/bin /usr/local/bin /usr/bin; do
+        [ -x "${p}/node" ] && NODE_BIN="${p}/node" && break
+    done
+fi
+[ -n "${NODE_BIN}" ] && export PATH="$(dirname "${NODE_BIN}"):${PATH}"
+
 # 生产模式要求 64 位 hex ENCRYPTION_KEY：首启生成并存入数据目录（重装/升级随数据保留）
 KEY_FILE="${DATA_LIBRARY_PATH}/data/.encryption-key"
 if [ -z "${ENCRYPTION_KEY:-}" ]; then
     mkdir -p "${DATA_LIBRARY_PATH}/data" 2>/dev/null || true
-    [ -s "${KEY_FILE}" ] || node -e "console.log(require('crypto').randomBytes(32).toString('hex'))" > "${KEY_FILE}" 2>/dev/null || true
+    [ -s "${KEY_FILE}" ] || "${NODE_BIN:-node}" -e "console.log(require('crypto').randomBytes(32).toString('hex'))" > "${KEY_FILE}" 2>/dev/null || true
     [ -s "${KEY_FILE}" ] && export ENCRYPTION_KEY="$(cat "${KEY_FILE}")"
 fi
 
@@ -39,13 +48,14 @@ status() {
 
 start_process() {
     status && return 0
-    command -v node >/dev/null 2>&1 || { log_err "node 不在 PATH（检查 nodejs_v24 依赖）"; return 1; }
+    [ -x "${NODE_BIN:-}" ] || command -v node >/dev/null 2>&1 || { log_err "node 未找到（nodejs_v24 套件缺失）"; return 1; }
+    NB="${NODE_BIN:-$(command -v node)}"
     [ -f "${APP_DIR}/server/dist/index.js" ] || { log_err "找不到 ${APP_DIR}/server/dist/index.js"; return 1; }
     log_msg "启动 freellmapi (PORT=${PORT}, USER=${RUN_USER}, DATA=${DATA_LIBRARY_PATH})"
     if [ "${RUN_USER}" != "root" ] && id "${RUN_USER}" >/dev/null 2>&1; then
-        su -s /bin/bash "${RUN_USER}" -c "cd '${APP_DIR}' && exec node server/dist/index.js >> '${LOG_FILE}' 2>&1 & echo \$!" &
+        su -s /bin/bash "${RUN_USER}" -c "cd '${APP_DIR}' && exec '${NB}' server/dist/index.js >> '${LOG_FILE}' 2>&1 & echo \$!" &
     else
-        bash -c "cd '${APP_DIR}' && exec node server/dist/index.js >> '${LOG_FILE}' 2>&1 & echo \$!" &
+        bash -c "cd '${APP_DIR}' && exec '${NB}' server/dist/index.js >> '${LOG_FILE}' 2>&1 & echo \$!" &
     fi
     pid=$!
     sleep 2
