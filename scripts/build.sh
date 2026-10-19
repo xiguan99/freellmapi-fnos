@@ -56,5 +56,6 @@ echo "[5/5] fnpack 打包 ..."
 sed -i "s/^version .*=.*/version               = $VERSION/" "$ROOT/fnpack/manifest"
 cd "$ROOT/fnpack"
 "$FP_BIN" build
+mv -f freellmapi.fpk "$ROOT/dist/" 2>/dev/null || true
 ls -la dist/ 2>/dev/null || ls -la *.fpk 2>/dev/null || true
 echo "═══ 完成：产物见 fnpack/ 或 dist/ ═══"
