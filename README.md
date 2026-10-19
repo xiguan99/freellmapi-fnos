@@ -1,6 +1,6 @@
 # freellmapi-fnos
 
-FreeLLMAPI 的飞牛 OS（fnOS）原生应用打包仓库，参照 deepseek.harness.fnos / fnos-hermes-agent-web 的维护模式。
+FreeLLMAPI 的飞牛 OS（fnOS）原生应用打包仓库。
 
 - 上游：https://github.com/tashfeenahmed/freellmapi （本仓库是它的 fork；克隆在 `upstream/`，已 gitignore）
 - 版本号规则：`上游版本.构建号`（见 `VERSION`），当前 0.16.2.3
