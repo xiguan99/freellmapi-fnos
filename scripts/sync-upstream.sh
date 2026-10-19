@@ -79,7 +79,7 @@ done
 [ "$ok" = "1" ] || echo "⚠ GitHub 推送 5 次都失败，提交留本地，稍后手动重推"
 
 # ── 持久副本 + 时间戳备份（保留最近 3 份）──
-rsync -a --delete --exclude 'upstream/' --exclude '.git/' "$ROOT/" "$PERSIST/"
+rsync -a --delete --exclude 'upstream/' --exclude '.git/' --exclude '.bak-*' "$ROOT/" "$PERSIST/"
 ts=$(date +%Y%m%d-%H%M%S)
 tar czf "$PERSIST/.bak-$ts.tgz" --exclude='upstream' --exclude='.git' --exclude='fnpack/app' -C "$ROOT" .
 ls "$PERSIST"/.bak-*.tgz 2>/dev/null | sort | head -n -3 | xargs -r rm --
