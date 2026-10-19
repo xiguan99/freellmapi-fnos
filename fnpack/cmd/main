@@ -15,6 +15,8 @@ RUN_USER="${wizard_run_user:-root}"
 export PORT="${PORT:-3003}"
 export NODE_ENV=production
 export FREELLMAPI_INSTALL_METHOD=fnos
+# fnOS 桌面入口是跨端口 iframe，需要放开 frame-ancestors（cmd/main 显式解析 node（守护环境 PATH 无 nodejs_v24）; 标题改 FreeLLMAPI; v0.16.2.2 配套补丁见 README 维护说明）
+export FREELLMAPI_FRAME_ANCESTORS="${FREELLMAPI_FRAME_ANCESTORS:-*}"
 [ -f "${DATA_LIBRARY_PATH}/freellmapi.env" ] && . "${DATA_LIBRARY_PATH}/freellmapi.env"
 
 # 服务守护环境的 PATH 不含 nodejs_v24 套件，需显式解析 node（实测：安装/启停时 command -v node 为空）

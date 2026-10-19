@@ -3,7 +3,12 @@
 FreeLLMAPI 的飞牛 OS（fnOS）原生应用打包仓库，参照 deepseek.harness.fnos / fnos-hermes-agent-web 的维护模式。
 
 - 上游：https://github.com/tashfeenahmed/freellmapi （本仓库是它的 fork；克隆在 `upstream/`，已 gitignore）
-- 版本号规则：`上游版本.构建号`（见 `VERSION`），当前 0.16.2.1
+- 版本号规则：`上游版本.构建号`（见 `VERSION`），当前 0.16.2.3
+
+## Fork 补丁（唯一源码改动，`upstream/` 内以 `git add -f` 入库）
+
+- `server/src/app.ts`：helmet CSP 新增 `frameAncestors` 覆盖——环境变量 `FREELLMAPI_FRAME_ANCESTORS`（空格分隔的 CSP source 列表）存在时替换默认 `'self'`，未设置时行为与上游完全一致。用途：fnOS 桌面入口是跨端口 iframe，默认 `'self'` 会把页面拦在框架外；打包默认在 cmd/main 里设 `*`（可在 `${TRIM_PKGVAR}/freellmapi.env` 收紧，如 `FREELLMAPI_FRAME_ANCESTORS="'self' http://NAS_IP:5666"`）。
+- 对应测试：`server/src/__tests__/routes/csp-security.test.ts` 末尾新增 describe（覆盖生效/默认不两路，20/20 通过）。
 
 ## 仓库布局
 
