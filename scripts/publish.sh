@@ -18,11 +18,12 @@ if [ -n "$EXISTING_ID" ]; then
   curl -sS -X DELETE -H "Authorization: token $GITHUB_TOKEN" "https://api.github.com/repos/$REPO/releases/$EXISTING_ID" >/dev/null 2>&1 || true
 fi
 
-BODY_JSON="$(python3 -c "import json,sys; print(json.dumps(sys.argv[1]))" "## freellmapi-fnos $CUR_VERSION"$'\n\n'"上游版本 $(echo "$CUR_VERSION" | cut -d. -f1-3)，fnOS 原生打包首个版本。")"
+NOTES_DEFAULT="## freellmapi-fnos $CUR_VERSION"$'\n\n'"上游版本 $(echo "$CUR_VERSION" | cut -d. -f1-3)，fnOS 原生打包。"
+BODY_JSON="$(python3 -c "import json,sys; print(json.dumps(sys.argv[1]))" "${NOTES:-$NOTES_DEFAULT}")"
 RELEASE_JSON="$(curl -sS -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Accept: application/vnd.github+json" -H "Content-Type: application/json" "https://api.github.com/repos/$REPO/releases" -d "{\"tag_name\":\"$TAG\",\"name\":\"freellmapi $CUR_VERSION\",\"body\":$BODY_JSON,\"draft\":false,\"prerelease\":false}")"
 RELEASE_ID="$(echo "$RELEASE_JSON" | grep -m1 '"id"' | grep -oE '[0-9]+')"
 [ -n "$RELEASE_ID" ] || { echo "✗ 创建 Release 失败: $RELEASE_JSON"; exit 1; }
-for f in "$DIST"/*.fpk; do
+for f in "$DIST/freellmapi_v${CUR_VERSION}_x86.fpk" $( [ -e "$DIST/freellmapi_v${CUR_VERSION}_x86.fpk" ] || ls "$DIST"/*.fpk 2>/dev/null ); do
   echo "上传 $(basename "$f") ..."
   UP="$(curl -sS -X POST -H "Authorization: token $GITHUB_TOKEN" -H "Content-Type: application/octet-stream" "https://uploads.github.com/repos/$REPO/releases/$RELEASE_ID/assets?name=$(basename "$f")" --data-binary @"$f")"
   echo "$UP" | grep -q '"id"' && echo "  ✓ $(echo "$UP" | grep -m1 '"browser_download_url"' || true)" || { echo "  ✗ $UP"; exit 1; }

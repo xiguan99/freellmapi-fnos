@@ -7,3 +7,5 @@ fnpack/*.fpk
 fnpack/app/*
 !fnpack/app/ui
 fnpack/app/ui/images/
+scripts/.secrets.env
+scripts/.sync.lock

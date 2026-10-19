@@ -1,0 +1,52 @@
+--- a/server/src/app.ts
++++ b/server/src/app.ts
+@@ -144,6 +144,13 @@
+         fontSrc: ["'self'"],
+         formAction: ["'self'"],
+         baseUri: ["'self'"],
++        // fork-patch (fnos): the fnOS desktop embeds the dashboard in an iframe,
++        // which is cross-origin to this app (its own port), so the helmet default
++        // frame-ancestors 'self' blocks it. FREELLMAPI_FRAME_ANCESTORS (space-
++        // separated CSP sources) overrides it; unset keeps upstream behaviour.
++        frameAncestors: process.env.FREELLMAPI_FRAME_ANCESTORS
++          ? process.env.FREELLMAPI_FRAME_ANCESTORS.split(" ")
++          : ["'self'"],
+         upgradeInsecureRequests: null,
+       },
+     },
+--- a/server/src/__tests__/routes/csp-security.test.ts
++++ b/server/src/__tests__/routes/csp-security.test.ts
+@@ -169,3 +169,33 @@
+     expect(csp).not.toContain('upgrade-insecure-requests');
+   });
+ });
++
++// fork-patch (fnos): frame-ancestors env override, for cross-origin embedding
++// (the fnOS desktop shows the dashboard in an iframe on its own origin).
++describe('CSP frame-ancestors override (fork patch)', () => {
++  let app: Express;
++  const saved = process.env.FREELLMAPI_FRAME_ANCESTORS;
++
++  beforeAll(() => {
++    process.env.FREELLMAPI_FRAME_ANCESTORS = "* http://127.0.0.1:5666";
++    app = createApp();
++  });
++
++  afterAll(() => {
++    if (saved === undefined) delete process.env.FREELLMAPI_FRAME_ANCESTORS;
++    else process.env.FREELLMAPI_FRAME_ANCESTORS = saved;
++  });
++
++  it('keeps self and adds configured sources when the env is set', async () => {
++    const headers = await getHeaders(app, '/api/ping');
++    const csp = headers.get('content-security-policy')!;
++    expect(csp).toContain("frame-ancestors * http://127.0.0.1:5666");
++  });
++
++  it('default (env unset) still yields frame-ancestors self', async () => {
++    delete process.env.FREELLMAPI_FRAME_ANCESTORS;
++    const plain = createApp();
++    const headers = await getHeaders(plain, '/api/ping');
++    expect(headers.get('content-security-policy')).toContain("frame-ancestors 'self'");
++  });
++});
