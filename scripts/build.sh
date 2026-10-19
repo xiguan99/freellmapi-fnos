@@ -42,6 +42,8 @@ cp -a "$UPSTREAM/client/dist" "$APP/client/dist"
 cp -a "$UPSTREAM/shared/." "$APP/shared/" 2>/dev/null || true
 cp "$UPSTREAM/desktop/package.json" "$APP/desktop/package.json"
 mkdir -p "$APP/server/data"
+# 断链清理：安装器设目录权限会遍历全树 acl_get_file，断链直接导致「设置目录权限失败」(errno 实测)
+n=$(find "$APP" -xtype l | wc -l); [ "$n" -gt 0 ] && { find "$APP" -xtype l -delete; echo "  清理断链 $n 个"; }
 
 echo "[x] 隐私扫描 ..."
 # 注：sk- 阈值 20+（实测客户端 bundle 里斯洛伐克语 chunk 名 sk-XXXXXXXX 会撞 8 位阈值，误报过一次）
