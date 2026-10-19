@@ -37,6 +37,10 @@
             {
                 "type": "tips",
                 "helpText": "<strong>注意：</strong>相关配置仅限安装时选定，安装完成后请勿随意修改，否则可能引发权限异常、服务无法启动或数据丢失。"
+            },
+            {
+                "type": "tips",
+                "helpText": "<strong>首次启动：</strong>创建管理员账号时如网页要求填「启动代码」，代码看本应用日志（应用中心→日志，或 <code>tail ${TRIM_PKGVAR}/info.log</code> 搜 \"First-run setup code\"）；在 NAS 本机浏览器打开则无需代码，可直接创建。"
             }
         ]
     }

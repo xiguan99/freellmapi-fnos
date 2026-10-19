@@ -25,5 +25,20 @@ if [ "${RUN_USER}" != "root" ] && id "${RUN_USER}" >/dev/null 2>&1; then
 fi
 
 bash "$(dirname "$0")/main" start 2>/dev/null || true
+
+# 首启 setup code：从日志抓出来回显到安装进度（远程设备创建账号时要用）
+sleep 2
+setup_code=""
+for i in 1 2 3 4 5 6; do
+    setup_code=$(grep -A1 "First-run setup code" "${LOG_FILE}" 2>/dev/null | tail -1 | tr -d '[:space:]')
+    [ -n "${setup_code}" ] && break
+    sleep 2
+done
+if [ -n "${setup_code}" ]; then
+    log_msg "首次设置代码（远程设备创建账号时填入）：${setup_code}"
+    echo "首次设置代码: ${setup_code}"
+fi
+echo "提示：NAS 本机浏览器打开 http://NAS_IP:3003 可直接创建账号，无需代码"
+
 log_msg "install_callback 完成"
 exit 0

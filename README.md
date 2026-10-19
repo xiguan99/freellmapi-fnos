@@ -3,7 +3,13 @@
 FreeLLMAPI 的飞牛 OS（fnOS）原生应用打包仓库。
 
 - 上游：https://github.com/tashfeenahmed/freellmapi （本仓库是它的 fork；克隆在 `upstream/`，已 gitignore）
-- 版本号规则：`上游版本.构建号`（见 `VERSION`），当前 0.16.2.3
+- 版本号规则：`上游版本.构建号`（见 `VERSION`），当前 0.16.5.2
+
+## 首次启动（Getting Started）
+
+首次启动需要创建管理员账号：
+- **在 NAS 本机的浏览器**打开（http://NAS_IP:3003）可直接完成设置，无需代码。
+- 从**其它设备**打开时，需要填一个一次性的「启动代码」（setup code）——它在服务启动日志里，搜 `First-run setup code` 这一行；可在应用中心的应用日志页看，或 `tail ${TRIM_PKGVAR}/info.log`（本实例通常是 `/vol1/@appdata/freellmapi/info.log`）。
 
 ## Fork 补丁（唯一源码改动，`upstream/` 内以 `git add -f` 入库）
 
