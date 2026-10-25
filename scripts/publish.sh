@@ -9,6 +9,13 @@ GITHUB_TOKEN="${GITHUB_TOKEN:?需要设置 GITHUB_TOKEN 环境变量}"
 CUR_VERSION="$(cat VERSION | tr -d '[:space:]')"
 TAG="v$CUR_VERSION"
 DIST="${DIST_DIR:-$ROOT/fnpack/dist}"
+# ── 同步提醒 ────────────────────────────────────────────────
+# 下面这段“从 manifest 派生应用名/标题”的逻辑，另外两个仓库里也有同一份：
+#   xiguan99/strata-fnos/scripts/publish.sh
+#   xiguan99/qwenpaw-fnos/scripts/publish.sh
+# 三处内容必须一致，改就三处一起改（不抽公共脚本/submodule：8 行 sed 不值得多一层维护，
+# 同步靠这条注释 + 台账 checklist）。
+# ───────────────────────────────────────────────────────────
 # 应用名/显示名从 manifest 读，不硬编码
 # （2026-10-25：strata 的 publish.sh 照抄 qwenpaw 版，把 Release 标题硬编码成 "QwenPaw …" 没改）
 MANIFEST="$ROOT/fnpack/manifest"
