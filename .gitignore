@@ -9,3 +9,4 @@ fnpack/app/*
 fnpack/app/ui/images/
 scripts/.secrets.env
 scripts/.sync.lock
+scripts/.sync.log
