@@ -11,7 +11,14 @@ UPSTREAM="${UPSTREAM_DIR:-$ROOT/upstream}"
 FP_BIN="$ROOT/scripts/fnpack-1.2.3-linux-amd64"
 # 版本号 = 上游版本.构建号（上游版本来自 desktop/package.json）
 UP_VER="$(node -e "console.log(require('$UPSTREAM/desktop/package.json').version)")"
-BUILD_NUM="$(cat "$ROOT/VERSION" | tr -d '[:space:]' | rev | cut -d. -f1 | rev)"
+# 守卫：默认 $ROOT/upstream 可能是旧快照，会把 VERSION 的前三位覆写成旧版本并出错版本包
+CUR_VER="$(cat "$ROOT/VERSION" | tr -d '[:space:]')"
+CUR_UP="${CUR_VER%.*}"
+if [ -n "$CUR_UP" ] && [ "$CUR_UP" != "$UP_VER" ]; then
+  echo "✗ VERSION 前三位($CUR_UP) 与上游版本($UP_VER) 不一致；请设置 UPSTREAM_DIR 指向正确上游（当前 UPSTREAM=$UPSTREAM）" >&2
+  exit 1
+fi
+BUILD_NUM="$(echo "$CUR_VER" | rev | cut -d. -f1 | rev)"
 VERSION="${UP_VER}.${BUILD_NUM}"
 [ -f "$ROOT/VERSION" ] && echo "$VERSION" > "$ROOT/VERSION"
 echo "═══ 构建 freellmapi v$VERSION ═══"
